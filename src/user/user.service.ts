@@ -1,16 +1,18 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDto, UpdateUserDto, CreateUserDto } from './dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   public async create(createUserDto: CreateUserDto) {
@@ -39,18 +41,24 @@ export class UserService {
       where: { email },
       select: { email: true, password: true, id: true },
     });
-  
+
     if (!user) {
-      throw new Error('No user');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
-  
-    const isValidPassword = await bcrypt.compareSync(password, user.password);
-  
+
+    const isValidPassword = bcrypt.compareSync(password, user.password);
+
     if (!isValidPassword) {
-      throw new Error('Invalid password');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
-  
-    return { ...user};
+
+    const payload = { sub: user.id, email: user.email };
+    const token = this.jwtService.sign(payload);
+
+    return {
+      ...user,
+      token,
+    };
   }
   public async update(id: string, updateUserDto: UpdateUserDto) {
     const { ...toUpdate } = updateUserDto;
@@ -74,7 +82,6 @@ export class UserService {
       return user
     }
   }
-
   private handleDBErrors(error: any): never {
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);
@@ -82,4 +89,5 @@ export class UserService {
     console.log(error);
     throw new InternalServerErrorException('Please check server logs');
   }
+  
 }

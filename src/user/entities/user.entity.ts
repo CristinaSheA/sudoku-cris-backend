@@ -12,9 +12,7 @@ export class User {
     unique: true
   })
   email: string;
-  @Column('text', {
-    unique: true
-  })
+  @Column('text')
   password: string;
   
   @Column()
