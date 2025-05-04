@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 export class CreateCompetitionDto {
   @IsString()
@@ -8,5 +8,8 @@ export class CreateCompetitionDto {
   @IsNumber()
   maxPlayers: number;
   @IsString()
-  joinCode: string
+  @IsNotEmpty()
+  creatorId: string
+
+  sudoku: [][];
 }

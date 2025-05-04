@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCompetitionDto } from './dto/create-competition.dto';
 import { Competition } from './entities/competition.entity';
 import { CompetitionResult } from './entities/competition-result.entity';
@@ -8,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
 import { v4 as uuidv4 } from 'uuid';
+import { UpdateCompetitionDto } from './dto/update-competition.dto';
 
 @Injectable()
 export class CompetitionsService {
@@ -17,8 +22,6 @@ export class CompetitionsService {
   constructor(
     @InjectRepository(Competition)
     private readonly competitionRepository: Repository<Competition>,
-    @InjectRepository(CompetitionResult)
-    private competitionResultRepository: Repository<CompetitionResult>,
   ) {}
 
   public findAll() {
@@ -30,28 +33,29 @@ export class CompetitionsService {
       return user;
     }
   }
-
   public async createCompetition(createCompetitionDto: CreateCompetitionDto) {
-    const competition: Competition = this.competitionRepository.create({
+    const competition = this.competitionRepository.create({
       difficulty: createCompetitionDto.difficulty,
       privacity: createCompetitionDto.privacity,
       maxPlayers: createCompetitionDto.maxPlayers,
-      joinCode: createCompetitionDto.joinCode,
+      joinCode: this.generateJoinCode(),
       startDate: new Date(),
-      participants: [],
-      sudoku: this.generateSudoku(),
+      players: [createCompetitionDto.creatorId],
+      sudoku: createCompetitionDto.sudoku,
     });
-    this.competitions.push(competition);
+
     return await this.competitionRepository.save(competition);
   }
-
-  public joinCompetition(competitionId: string, userId: string): Competition {
-    const competition = this.competitions.find(
-      (comp) => comp.id === competitionId,
-    );
-    if (!competition) throw new Error('Competition not found');
-    competition.participants.push(userId);
-    return competition;
+  public async updateCompetition(
+    id: string,
+    updateCompetitionDto: UpdateCompetitionDto,
+  ) {
+    const competition = await this.competitionRepository.preload({
+      ...updateCompetitionDto,
+      id,
+    });
+    console.log(updateCompetitionDto);
+    return await this.competitionRepository.save(competition);
   }
   public submitSolution(submitSolutionDto: SubmitSolutionDto) {
     const competition = this.competitions.find(
@@ -71,7 +75,7 @@ export class CompetitionsService {
       competitionId: submitSolutionDto.competitionId,
       timeTaken,
       isCorrect,
-      id: uuidv4()
+      id: uuidv4(),
     };
     this.results.push(result);
 
@@ -85,15 +89,19 @@ export class CompetitionsService {
     if (!competition) {
       throw new Error('Competition not found');
     }
-    if (competition.participants.includes(userId)) {
+    if (competition.players.includes(userId)) {
       throw new Error('User already joined this competition');
     }
-    competition.participants.push(userId);
+    competition.players.push(userId);
     return competition;
   }
-
-  private generateSudoku(): number[][] {
-    return Array.from({ length: 9 }, () => Array(9).fill(0));
+  private generateJoinCode() {
+    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return code;
   }
   private validateSolution(
     original: number[][],
@@ -108,5 +116,27 @@ export class CompetitionsService {
       }
     }
     return true;
+  }
+  public async joinCompetition(competitionId: string, userId: string) {
+    const competition = await this.findOne(competitionId);
+    if (!competition) {
+      throw new NotFoundException('Competition not found');
+    }
+    if (competition.players.includes(userId)) {
+      throw new BadRequestException('User already in competition');
+    }
+    if (
+      competition.privacity === 'private' &&
+      competition.players.length >= competition.maxPlayers
+    ) {
+      throw new BadRequestException('Competition is full');
+    }
+    competition.players.push(userId);
+    await this.competitionRepository.save(competition);
+
+    return {
+      message: 'Successfully joined competition',
+      competition,
+    };
   }
 }

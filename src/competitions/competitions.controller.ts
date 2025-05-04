@@ -13,19 +13,30 @@ export class CompetitionsController {
   getCompetitions() {
     return this.competitionsService.findAll();
   }
-
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.competitionsService.findOne(id);
+  }
   @Post()
   createCompetition(@Body() createCompetitionDto: CreateCompetitionDto) {
     return this.competitionsService.createCompetition(createCompetitionDto);
   }
-
-  @Post(':id/join')
-  joinCompetition(@Param('id') competitionId: string, @Body() joinCompetitionDto: JoinCompetitionDto) {
-    return this.competitionsService.joinCompetition(competitionId, joinCompetitionDto.userId);
+  @Patch(':id/join')
+  async joinCompetition(
+    @Param('id') competitionId: string,
+    @Body() body: { userId: string }
+  ) {
+    return this.competitionsService.joinCompetition(competitionId, body.userId);
   }
 
   @Post(':id/submit')
   submitSolution(@Body() submitSolutionDto: SubmitSolutionDto) {
     return this.competitionsService.submitSolution(submitSolutionDto);
   }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateCompetitionDto: UpdateCompetitionDto) {
+    return this.competitionsService.updateCompetition(id, updateCompetitionDto);
+  }
+
 }

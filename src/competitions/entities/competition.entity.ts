@@ -11,8 +11,8 @@ export class Competition {
   @Column()
   startDate: Date;
 
-  @Column('text', { array: true })
-  participants: string[];
+  @Column({ type: 'simple-array', default: [] })
+  players: string[];
   
   @Column('json')
   sudoku: number[][];
