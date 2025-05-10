@@ -68,7 +68,7 @@ export class CompetitionsService {
       submitSolutionDto.solution,
     );
     const timeTaken =
-      (new Date().getTime() - competition.startDate.getTime()) / 1000; // Tiempo en segundos
+      (new Date().getTime() - competition.startDate.getTime()) / 1000;
 
     const result: CompetitionResult = {
       userId: submitSolutionDto.userId,

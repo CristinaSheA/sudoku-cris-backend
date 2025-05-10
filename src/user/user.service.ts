@@ -24,12 +24,13 @@ export class UserService {
         password: bcrypt.hashSync(password, 10),
       });
       user.gamesPlayed = 0
-      user.gamesWon = 0
+      user.gamesWon = {
+        easy: 0,
+        medium: 0,
+        hard: 0
+      }
       user.successRate = 0
 
-      user.hardGamesWon = 0
-      user.mediumGamesWon = 0
-      user.easyGamesWon = 0
       return await this.userRepository.save(user);
     } catch (error) {
       this.handleDBErrors(error)

@@ -9,6 +9,4 @@ export class CompetitionResultDto {
   timeTaken: number;
   @IsBoolean()
   isCorrect: boolean;
-
-
 }
